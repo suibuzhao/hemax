@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>河马剧场 - 睡不着</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#ff6b6b;--primary-dark:#e85555;--bg:#0f0f1a;
+  --card-bg:#1a1a2e;--card-hover:#22223a;--text:#e0e0e0;
+  --text-dim:#888;--accent:#ffd93d;--tag:#6c5ce7;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body.no-scroll{overflow:hidden}
+
+/* ========== Header ========== */
+.header{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,#0f0f1a 70%,transparent);padding:12px 16px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:20px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.logo span{font-size:11px;font-weight:400;opacity:.6;margin-left:4px;-webkit-text-fill-color:#888}
+.search-box{flex:1;display:flex;align-items:center;background:#1e1e32;border-radius:20px;padding:8px 14px;gap:8px}
+.search-box input{flex:1;background:none;border:none;outline:none;color:#fff;font-size:14px}
+.search-box input::placeholder{color:#666}
+.search-box svg{width:16px;height:16px;fill:#666;flex-shrink:0}
+
+/* ========== Banner ========== */
+.banner{margin:0 16px 16px;border-radius:12px;overflow:hidden;position:relative;aspect-ratio:16/7;background:linear-gradient(135deg,#2d1b4e,#1a1a2e)}
+.banner-img{width:100%;height:100%;object-fit:cover;opacity:.5}
+.banner-info{position:absolute;inset:0;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;background:linear-gradient(0,rgba(15,15,26,.9) 0%,transparent 60%)}
+.banner-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.banner-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.15)}
+.tag.red{background:rgba(255,107,107,.25);color:#ff9999}
+.tag.purple{background:rgba(108,92,231,.25);color:#a29bfe}
+.banner-meta{font-size:11px;color:#aaa;margin-top:6px}
+
+/* ========== Tabs ========== */
+.tabs-wrap{margin-bottom:12px}
+.tabs{overflow-x:auto;padding:0 16px;display:flex;gap:6px;scrollbar-width:none;white-space:nowrap}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 14px;border-radius:14px;font-size:13px;background:#1e1e32;color:#888;transition:all .2s;cursor:pointer;white-space:nowrap}
+.tab.active{background:var(--primary);color:#fff;font-weight:600}
+.tab:active{transform:scale(.95)}
+
+/* ========== Grid ========== */
+.grid{padding:0 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.card{cursor:pointer;border-radius:10px;overflow:hidden;background:var(--card-bg);transition:transform .2s,box-shadow .2s;position:relative}
+.card:active{transform:scale(.97)}
+.card-cover{width:100%;aspect-ratio:3/4;background:#222;position:relative;overflow:hidden}
+.card-cover img{width:100%;height:100%;object-fit:cover}
+.card-cover .overlay{position:absolute;inset:0;background:linear-gradient(0,transparent 40%,rgba(0,0,0,.7));opacity:0;transition:opacity .2s}
+.card:hover .overlay{opacity:1}
+.card-cover .ep-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;backdrop-filter:blur(4px)}
+.card-cover .lock{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;background:rgba(0,0,0,.6);border-radius:50%;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.card-cover .lock svg{width:16px;height:16px;fill:#ffd93d}
+.card-info{padding:8px}
+.card-title{font-size:12px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px}
+.card-meta{font-size:10px;color:var(--text-dim);display:flex;justify-content:space-between}
+.card-meta .views{display:flex;align-items:center;gap:2px}
+.card-meta .views svg{width:10px;height:10px;fill:#666}
+
+/* ========== Empty / Loading ========== */
+.state{text-align:center;padding:60px 20px;color:#555}
+.state svg{width:48px;height:48px;fill:#333;margin-bottom:12px}
+.state p{font-size:14px}
+
+/* ========== Detail Modal ========== */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;flex-direction:column;overflow-y:auto}
+.modal-overlay.show{display:flex}
+.modal-close{position:fixed;top:12px;right:12px;z-index:201;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.6);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-close svg{width:18px;height:18px;fill:#fff}
+
+/* Detail Hero */
+.detail-hero{width:100%;aspect-ratio:16/9;background:#111;position:relative;overflow:hidden}
+.detail-hero img{width:100%;height:100%;object-fit:cover;filter:blur(20px);transform:scale(1.1);opacity:.4}
+.detail-hero .dh-content{position:absolute;inset:0;display:flex;gap:14px;padding:20px;align-items:flex-end;background:linear-gradient(0,rgba(15,15,26,1) 0%,rgba(15,15,26,.6) 50%,transparent)}
+.dh-cover{width:100px;flex-shrink:0;border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.dh-cover img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+.dh-info{flex:1;min-width:0}
+.dh-title{font-size:18px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.dh-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.dh-meta{font-size:12px;color:#aaa;line-height:1.6}
+.dh-actions{display:flex;gap:8px;margin-top:10px}
+.btn{font-size:13px;padding:8px 16px;border-radius:20px;border:none;cursor:pointer;font-weight:600;transition:all .2s}
+.btn:active{transform:scale(.95)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-outline{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)}
+
+/* Episodes */
+.detail-body{padding:16px}
+.section-title{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.ep-list{display:flex;flex-direction:column;gap:8px}
+.ep-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#1a1a2e;border-radius:10px;cursor:pointer;transition:background .15s}
+.ep-item:active{background:#22223a}
+.ep-item.locked{opacity:.5}
+.ep-item.current{border:1px solid var(--primary)}
+.ep-num{width:28px;height:28px;background:#252540;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#888;flex-shrink:0}
+.ep-item.current .ep-num{background:var(--primary);color:#fff}
+.ep-item.locked .ep-num{background:#1e1e32}
+.ep-item.locked .ep-num::after{content:'';display:block;width:8px;height:8px;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffd93d' d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E") center/contain no-repeat}
+.ep-info{flex:1;min-width:0}
+.ep-title{font-size:13px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-desc{font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-status{font-size:11px;color:#666;flex-shrink:0}
+.ep-status.free{color:#4ecdc4}
+.ep-status.locked{color:#ffd93d}
+
+/* ========== Player Modal ========== */
+.player-modal{position:fixed;inset:0;z-index:300;background:#000;display:none;flex-direction:column}
+.player-modal.show{display:flex}
+.player-header{display:flex;align-items:center;padding:12px 16px;gap:12px;background:#111}
+.player-back{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center}
+.player-title{flex:1;font-size:14px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-main{flex:1;position:relative;background:#000;display:flex;align-items:center;justify-content:center}
+.video-wrap{flex:1;height:100%}
+.video-wrap video{width:100%;height:100%;object-fit:contain}
+
+/* Ad Overlay */
+.ad-overlay{position:absolute;inset:0;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10}
+.ad-overlay.hidden{display:none}
+.ad-timer{font-size:48px;font-weight:900;color:var(--accent);font-family:'Arial Black',sans-serif;margin-bottom:8px}
+.ad-label{font-size:12px;color:#666;margin-bottom:24px;text-transform:uppercase;letter-spacing:2px}
+.ad-skip{font-size:13px;color:#fff;padding:8px 20px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);cursor:pointer;display:none}
+.ad-skip.show{display:block}
+.ad-hint{position:absolute;bottom:20px;font-size:12px;color:#555;text-align:center}
+
+/* Player Controls */
+.player-controls{position:absolute;bottom:0;left:0;right:0;padding:20px 16px;background:linear-gradient(0,transparent,rgba(0,0,0,.8));display:flex;flex-direction:column;gap:8px}
+.pc-progress{width:100%;height:3px;background:rgba(255,255,255,.2);border-radius:2px;cursor:pointer;position:relative}
+.pc-progress-fill{height:100%;background:var(--primary);border-radius:2px;width:0%;transition:width .1s}
+.pc-time{font-size:11px;color:#ccc;display:flex;justify-content:space-between}
+
+/* Demo Mode Banner */
+.demo-banner{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:999;background:#333;border-bottom-left-radius:12px;border-bottom-right-radius:12px;padding:6px 20px;font-size:12px;color:#ffd93d;box-shadow:0 2px 12px rgba(0,0,0,.5);display:none}
+.demo-banner.show{display:block}
+
+/* Toast */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;font-size:13px;padding:10px 20px;border-radius:20px;z-index:999;pointer-events:none;animation:fadeUp .3s}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* Loading spinner */
+.spinner{width:32px;height:32px;border:3px solid #333;border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body class="no-scroll">
+
+<!-- Demo Banner -->
+<div class="demo-banner" id="demoBanner">演示模式 · 内置测试数据 · 填入 API Key 切换真实数据</div>
+
+<!-- ========== Home ========== -->
+<div id="homeView">
+  <div class="header">
+    <div class="logo">河马剧场<span>睡不着</span></div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" id="searchInput" placeholder="搜索短剧名称" maxlength="50">
+    </div>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner" id="banner" style="display:none">
+    <div class="banner-img" id="bannerImg"></div>
+    <div class="banner-info">
+      <div class="banner-title" id="bannerTitle"></div>
+      <div class="banner-tags" id="bannerTags"></div>
+      <div class="banner-meta" id="bannerMeta"></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-wrap">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-cat="全部">全部</div>
+      <div class="tab" data-cat="重生">重生</div>
+      <div class="tab" data-cat="穿越">穿越</div>
+      <div class="tab" data-cat="霸总">霸总</div>
+      <div class="tab" data-cat="甜宠">甜宠</div>
+      <div class="tab" data-cat="逆袭">逆袭</div>
+      <div class="tab" data-cat="都市">都市</div>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ========== Detail Modal ========== -->
+<div class="modal-overlay" id="detailModal">
+  <button class="modal-close" onclick="closeDetail()">
+    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  </button>
+  <div class="detail-hero">
+    <img id="dhBg" src="" alt="">
+    <div class="dh-content">
+      <div class="dh-cover"><img id="dhCover" src="" alt=""></div>
+      <div class="dh-info">
+        <div class="dh-title" id="dhTitle"></div>
+        <div class="dh-tags" id="dhTags"></div>
+        <div class="dh-meta" id="dhMeta"></div>
+        <div class="dh-actions">
+          <button class="btn btn-primary" id="dhPlayBtn" onclick="playFirstUnlocked()">立即播放</button>
+          <button class="btn btn-outline" id="dhFavBtn" onclick="toggleFav()">收藏</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="detail-body">
+    <div class="section-title">选集</div>
+    <div class="ep-list" id="epList"></div>
+  </div>
+</div>
+
+<!-- ========== Player Modal ========== -->
+<div class="player-modal" id="playerModal">
+  <div class="player-header">
+    <button class="player-back" onclick="closePlayer()">&#8592;</button>
+    <div class="player-title" id="playerTitle"></div>
+  </div>
+  <div class="player-main" id="playerMain">
+    <!-- Ad Overlay -->
+    <div class="ad-overlay" id="adOverlay">
+      <div class="ad-timer" id="adTimer">5</div>
+      <div class="ad-label">广告</div>
+      <button class="ad-skip" id="adSkip" onclick="skipAd()">跳过广告 ▶</button>
+      <div class="ad-hint">观看完整广告即可解锁本集</div>
+    </div>
+    <!-- Video -->
+    <div class="video-wrap" id="videoWrap">
+      <video id="videoPlayer" controls playsinline x-webkit-airplay="allow"></video>
+    </div>
+  </div>
+  <div class="player-controls" id="playerControls" style="display:none">
+    <div class="pc-progress" id="pcProgress"><div class="pc-progress-fill" id="pcFill"></div></div>
+    <div class="pc-time">
+      <span id="pcCurrent">00:00</span>
+      <span id="pcTotal">00:00</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 配置区 —— 填入你的 52api Key
+// ============================================================
+const API_KEY = '';  // 填入 Key 后自动切换真实数据，如 '' 则使用演示数据
+const BASE_URL = 'https://www.52api.cn/api/hm_duanju';
+
+// ============================================================
+// 演示数据（内置 20 部真实感短剧，API Key 为空时使用）
+// ============================================================
+const DEMO_DATA = {
+  banner: {
+    title: '重生逆袭：顾少的亿万甜妻',
+    tags: ['完结', '逆袭', '总裁'],
+    meta: '顾晚 陆景琛 · 80集 · 8.2万次观看',
+    cover: 'https://picsum.photos/seed/drama1/400/225'
+  },
+  dramas: [
+    { id:'d001', title:'重生逆袭：顾少的亿万甜妻', cat:'逆袭', tags:['完结','总裁'], episodes:80, views:'8.2万', cover:'https://picsum.photos/seed/d001/300/400', locked:6, desc:'顾家千金被陷害致死，重生归来誓要复仇...' },
+    { id:'d002', title:'穿越之嫡女翻身记', cat:'穿越', tags:['完结','古言'], episodes:65, views:'6.7万', cover:'https://picsum.photos/seed/d002/300/400', locked:1, desc:'一朝穿越成不受宠的嫡女，她誓要翻盘...' },
+    { id:'d003', title:'霸总的心尖宠', cat:'霸总', tags:['完结','甜宠'], episodes:70, views:'9.1万', cover:'https://picsum.photos/seed/d003/300/400', locked:6, desc:'他是江城最冷的霸总，却对她一见倾心...' },
+    { id:'d004', title:'甜婚似火：偏执总裁撩上瘾', cat:'甜宠', tags:['完结','都市'], episodes:55, views:'7.4万', cover:'https://picsum.photos/seed/d004/300/400', locked:3, desc:'一场意外，她被迫嫁给他，从此被他宠上天...' },
+    { id:'d005', title:'逆流1978', cat:'逆袭', tags:['完结','年代'], episodes:90, views:'5.3万', cover:'https://picsum.photos/seed/d005/300/400', locked:8, desc:'重回1978，看他如何白手起家成为首富...' },
+    { id:'d006', title:'天价萌宝：爹地哪里逃', cat:'甜宠', tags:['完结','萌宝'], episodes:60, views:'11.2万', cover:'https://picsum.photos/seed/d006/300/400', locked:4, desc:'五年前她带球跑路，五年后萌宝拽来爹地...' },
+    { id:'d007', title:'重生之我是药王', cat:'重生', tags:['完结','都市'], episodes:75, views:'4.8万', cover:'https://picsum.photos/seed/d007/300/400', locked:5, desc:'意外获得药王传承，悬壶济世逆天改命...' },
+    { id:'d008', title:'穿越唐朝当贵妃', cat:'穿越', tags:['完结','古言'], episodes:85, views:'8.6万', cover:'https://picsum.photos/seed/d008/300/400', locked:1, desc:'穿越成宫女，看她如何一步步登上贵妃之位...' },
+    { id:'d009', title:'傅少的隐婚甜妻', cat:'霸总', tags:['完结','甜宠'], episodes:68, views:'12.5万', cover:'https://picsum.photos/seed/d009/300/400', locked:6, desc:'一场协议婚姻，他的心却渐渐沦陷...' },
+    { id:'d010', title:'都市绝武医神', cat:'逆袭', tags:['完结','都市'], episodes:95, views:'6.1万', cover:'https://picsum.photos/seed/d010/300/400', locked:5, desc:'兵王回归都市，左手医术右手古武，谁与争锋...' },
+    { id:'d011', title:'重生八零：肥妻大翻身', cat:'重生', tags:['完结','年代'], episodes:72, views:'5.9万', cover:'https://picsum.photos/seed/d011/300/400', locked:3, desc:'一朝重生，她发誓再不当那个受气的肥妻...' },
+    { id:'d012', title:'先婚后爱：顾律师的黑月光', cat:'甜宠', tags:['完结','都市'], episodes:58, views:'7.8万', cover:'https://picsum.photos/seed/d012/300/400', locked:4, desc:'她是他心中的白月光，他却是她的劫...' },
+    { id:'d013', title:'冷面帝君的小萌妃', cat:'穿越', tags:['完结','古言'], episodes:78, views:'9.3万', cover:'https://picsum.photos/seed/d013/300/400', locked:1, desc:'现代女特工穿越成不受宠的小萌妃，逆天改命...' },
+    { id:'d014', title:'离婚后，前夫追妻火葬场', cat:'都市', tags:['完结','虐恋'], episodes:66, views:'10.4万', cover:'https://picsum.photos/seed/d014/300/400', locked:5, desc:'她提出离婚的那一刻，他的世界崩塌了...' },
+    { id:'d015', title:'我的七个姐姐风华绝代', cat:'逆袭', tags:['完结','都市'], episodes:88, views:'8.9万', cover:'https://picsum.photos/seed/d015/300/400', locked:6, desc:'七个姐姐各个风华绝代，他却只想低调生活...' },
+    { id:'d016', title:'农门娇妻：带着空间奔小康', cat:'穿越', tags:['完结','种田'], episodes:82, views:'4.2万', cover:'https://picsum.photos/seed/d016/300/400', locked:1, desc:'带着空间穿越农门，看她如何发家致富...' },
+    { id:'d017', title:'盛宠难逃：偏执大佬的掌心娇', cat:'霸总', tags:['完结','豪门'], episodes:62, views:'13.1万', cover:'https://picsum.photos/seed/d017/300/400', locked:5, desc:'他偏执成瘾，她是他唯一的救赎...' },
+    { id:'d018', title:'神医狂妃：废柴九小姐', cat:'穿越', tags:['完结','古言'], episodes:92, views:'7.2万', cover:'https://picsum.photos/seed/d018/300/400', locked:1, desc:'废柴九小姐逆袭成神医，惊艳天下...' },
+    { id:'d019', title:'闪婚娇妻：厉少乖乖宠', cat:'甜宠', tags:['完结','都市'], episodes:54, views:'9.7万', cover:'https://picsum.photos/seed/d019/300/400', locked:3, desc:'一场闪婚，她成了厉少的掌心宠...' },
+    { id:'d020', title:'重生之千金归来', cat:'重生', tags:['完结','豪门'], episodes:76, views:'11.6万', cover:'https://picsum.photos/seed/d020/300/400', locked:5, desc:'前世被继母妹妹害死，重生归来誓要夺回一切...' },
+  ]
+};
+
+// Demo episodes for each drama
+function getDemoEpisodes(dramaId, total) {
+  const eps = [];
+  for (let i = 1; i <= Math.min(total, 20); i++) {
+    eps.push({
+      num: i,
+      title: `第${i}集`,
+      locked: i > drama.locked,
+      // Use a public domain video for demo
+      url: 'https://www.w3schools.com/html/mov_bbb.mp4'
+    });
+  }
+  return eps;
+}
+
+// ============================================================
+// State
+// ============================================================
+let currentCat = '全部';
+let currentDrama = null;
+let allDramas = [];
+let favs = JSON.parse(localStorage.getItem('hemax_favs') || '[]');
+let adTimer = null;
+let adCountdown = 5;
+let currentEpisode = null;
+
+// ============================================================
+// API Layer
+// ============================================================
+async function fetchAPI(type, params) {
+  if (!API_KEY) return null;  // use demo
+  const url = new URL(BASE_URL);
+  url.searchParams.set('key', API_KEY);
+  url.searchParams.set('type', type);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined) url.searchParams.set(k, v);
+  }
+  const res = await fetch(url);
+  return res.json();
+}
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  if (API_KEY) {
+    document.getElementById('demoBanner').classList.add('show');
+  }
+  loadData();
+  setupTabs();
+  setupSearch();
+}
+
+// Load dramas (API or demo)
+async function loadData() {
+  if (API_KEY) {
+    // Live API mode
+    try {
+      const res = await fetchAPI('search', { keyword: '重生', page: 1 });
+      if (res.data && res.data.length > 0) {
+        allDramas = res.data.map(item => ({
+          id: item.id || item.album_id,
+          title: item.title || item.name,
+          cat: '全部',
+          tags: item.tags || [],
+          episodes: item.episode_count || item.total_episodes || 0,
+          views: item.views || item.play_count || '0',
+          cover: item.cover || item.thumb || item.image || '',
+          locked: item.lock_num || 1,
+          desc: item.desc || item.description || ''
+        }));
+        renderGrid();
+        renderBanner();
+      }
+    } catch (e) {
+      console.error('API error', e);
+      useDemo();
+    }
+  } else {
+    useDemo();
+  }
+}
+
+function useDemo() {
+  allDramas = DEMO_DATA.dramas.map(d => ({...d}));
+  renderGrid();
+  renderBanner();
+}
+
+// ============================================================
+// Render
+// ============================================================
+function renderBanner() {
+  const bd = DEMO_DATA.banner;
+  document.getElementById('banner').style.display = 'block';
+  document.getElementById('bannerImg').src = bd.cover;
+  document.getElementById('bannerTitle').textContent = bd.title;
+  document.getElementById('bannerTags').innerHTML = bd.tags.map(t => `<span class="tag red">${t}</span>`).join('');
+  document.getElementById('bannerMeta').textContent = bd.meta;
+  document.getElementById('banner').onclick = () => openDetail(allDramas[0]);
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const filtered = currentCat === '全部' ? allDramas : allDramas.filter(d => d.cat === currentCat);
+  
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="state">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <p>暂无该分类内容</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(d => `
+    <div class="card" onclick="openDetail(allDramas.find(x=>x.id=='${d.id}'))">
+      <div class="card-cover">
+        <img src="${d.cover}" alt="${d.title}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 400%22%3E%3Crect fill=%22%23222%22 width=%22300%22 height=%22400%22/%3E%3Ctext x=%22150%22 y=%22200%22 text-anchor=%22middle%22 fill=%22%23444%22 font-size=%2240%22%3E🎬%3C/text%3E%3C/svg%3E'">
+        ${d.locked > 1 ? `<div class="lock"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>` : ''}
+        <div class="ep-badge">${d.episodes}集</div>
+        <div class="overlay"></div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">${d.title}</div>
+        <div class="card-meta">
+          <span class="views">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 8.11 1 12c1.73 3.89 6 7.5 11 7.5s9.27-3.61 11-7.5c-1.73-3.89-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            ${d.views}
+          </span>
+          <span style="color:var(--primary)">▶播放</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// Detail
+// ============================================================
+async function openDetail(drama) {
+  currentDrama = drama;
+  document.getElementById('homeView').style.display = 'none';
+  document.getElementById('detailModal').classList.add('show');
+  document.body.classList.remove('no-scroll');
+  window.scrollTo(0, 0);
+
+  // Render hero
+  document.getElementById('dhBg').src = drama.cover;
+  document.getElementById('dhCover').src = drama.cover;
+  document.getElementById('dhTitle').textContent = drama.title;
+  document.getElementById('dhTags').innerHTML = (drama.tags||[]).map(t => `<span class="tag purple">${t}</span>`).join('');
+  document.getElementById('dhMeta').innerHTML = `主演: ${drama.desc || '未知'}\n集数: ${drama.episodes}集全\n播放: ${drama.views}次`;
+
+  const favBtn = document.getElementById('dhFavBtn');
+  favBtn.textContent = favs.includes(drama.id) ? '已收藏 ♥' : '收藏';
+
+  // Load episodes
+  const eps = await loadEpisodes(drama);
+  renderEpisodes(eps);
+}
+
+async function loadEpisodes(drama) {
+  if (API_KEY) {
+    try {
+      const res = await fetchAPI('detail', { id: drama.id });
+      if (res.data) {
+        const list = res.data.episodes || res.data.videos || res.data.list || [];
+        return list.map((ep, i) => ({
+          num: i + 1,
+          title: ep.title || `第${i+1}集`,
+          locked: false,
+          url: ''
+        }));
+      }
+    } catch(e) {}
+  }
+  // Demo episodes
+  return getDemoEpisodes(drama.id, drama.episodes);
+}
+
+function renderEpisodes(eps) {
+  const el = document.getElementById('epList');
+  el.innerHTML = eps.map(ep => `
+    <div class="ep-item ${ep.locked ? 'locked' : ''} ${ep.num === 1 && !ep.locked ? 'current' : ''}" 
+         onclick="${ep.locked ? 'showAdFor(' + ep.num + ')' : 'playEpisode(' + ep.num + ')'}">
+      <div class="ep-num">${ep.locked ? '🔒' : ep.num}</div>
+      <div class="ep-info">
+        <div class="ep-title">${ep.title}</div>
+        <div class="ep-desc">${ep.locked ? '观看广告解锁' : '可播放'}</div>
+      </div>
+      <div class="ep-status ${ep.locked ? 'locked' : 'free'}">${ep.locked ? '广告解锁' : '▶ 播放'}</div>
+    </div>
+  `).join('');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('show');
+  document.getElementById('homeView').style.display = 'block';
+  document.body.classList.add('no-scroll');
+}
+
+function playFirstUnlocked() {
+  const drama = currentDrama;
+  const lockNum = drama.locked || 1;
+  playEpisode(lockNum);
+}
+
+function toggleFav() {
+  if (!currentDrama) return;
+  const idx = favs.indexOf(currentDrama.id);
+  if (idx >= 0) {
+    favs.splice(idx, 1);
+    showToast('已取消收藏');
+  } else {
+    favs.push(currentDrama.id);
+    showToast('已收藏 ♥');
+  }
+  localStorage.setItem('hemax_favs', JSON.stringify(favs));
+  document.getElementById('dhFavBtn').textContent = favs.includes(currentDrama.id) ? '已收藏 ♥' : '收藏';
+}
+
+// ============================================================
+// Player with Ad
+// ============================================================
+async function playEpisode(num) {
+  const drama = currentDrama;
+  currentEpisode = num;
+  
+  document.getElementById('playerModal').classList.add('show');
+  document.getElementById('playerTitle').textContent = `${drama.title} 第${num}集`;
+  document.body.classList.remove('no-scroll');
+
+  // Show ad first
+  showAd(() => {
+    doPlay(num);
+  });
+}
+
+function showAdFor(num) {
+  showAd(() => playEpisode(num));
+}
+
+function showAd(onComplete) {
+  const overlay = document.getElementById('adOverlay');
+  const timer = document.getElementById('adTimer');
+  const skip = document.getElementById('adSkip');
+  
+  overlay.classList.remove('hidden');
+  adCountdown = 5;
+  timer.textContent = adCountdown;
+  skip.classList.remove('show');
+
+  if (adTimer) clearInterval(adTimer);
+  adTimer = setInterval(() => {
+    adCountdown--;
+    timer.textContent = adCountdown;
+    if (adCountdown <= 0) {
+      clearInterval(adTimer);
+      skip.classList.add('show');
+    }
+  }, 1000);
+
+  window._adCallback = onComplete;
+}
+
+function skipAd() {
+  if (adTimer) clearInterval(adTimer);
+  document.getElementById('adOverlay').classList.add('hidden');
+  if (window._adCallback) window._adCallback();
+}
+
+async function doPlay(num) {
+  const drama = currentDrama;
+  let url = '';
+
+  if (API_KEY) {
+    try {
+      const res = await fetchAPI('video', { id: drama.id, video_id: num });
+      if (res.data) {
+        url = res.data.url || res.data.play_url || res.data.video_url || '';
+      }
+    } catch(e) {}
+  }
+
+  if (!url) {
+    // Demo: use public domain video
+    url = 'https://www.w3schools.com/html/mov_bbb.mp4';
+  }
+
+  document.getElementById('playerControls').style.display = 'flex';
+  const video = document.getElementById('videoPlayer');
+  video.src = url;
+  video.load();
+  video.play().catch(() => {});
+  setupVideoControls(video);
+}
+
+function closePlayer() {
+  if (adTimer) clearInterval(adTimer);
+  const video = document.getElementById('videoPlayer');
+  video.pause();
+  video.src = '';
+  document.getElementById('playerModal').classList.remove('show');
+  document.getElementById('adOverlay').classList.add('hidden');
+  document.getElementById('playerControls').style.display = 'none';
+  document.body.classList.remove('no-scroll');
+}
+
+function setupVideoControls(video) {
+  const fill = document.getElementById('pcFill');
+  const current = document.getElementById('pcCurrent');
+  const total = document.getElementById('pcTotal');
+  const progress = document.getElementById('pcProgress');
+
+  video.onloadedmetadata = () => {
+    total.textContent = formatTime(video.duration);
+  };
+  video.ontimeupdate = () => {
+    const pct = video.duration ? (video.currentTime / video.duration * 100) : 0;
+    fill.style.width = pct + '%';
+    current.textContent = formatTime(video.currentTime);
+  };
+  progress.onclick = (e) => {
+    const rect = progress.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    video.currentTime = pct * video.duration;
+  };
+}
+
+function formatTime(s) {
+  if (!s || isNaN(s)) return '00:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+// ============================================================
+// Tabs & Search
+// ============================================================
+function setupTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentCat = tab.dataset.cat;
+      renderGrid();
+    };
+  });
+}
+
+function setupSearch() {
+  const input = document.getElementById('searchInput');
+  let debounce = null;
+  input.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      const q = input.value.trim().toLowerCase();
+      if (!q) { renderGrid(); return; }
+      const filtered = allDramas.filter(d => d.title.toLowerCase().includes(q));
+      const grid = document.getElementById('grid');
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="state"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><p>未找到 "${input.value}" 相关短剧</p></div>`;
+      } else {
+        // temp override
+        const savedCat = currentCat;
+        currentCat = '__search__';
+        allDramas._search = filtered;
+        const orig = allDramas;
+        // quick render
+        grid.innerHTML = filtered.map(d => `
+          <div class="card" onclick="openDetail(allDramas._search.find(x=>x.id=='${d.id}'))">
+            <div class="card-cover">
+              <img src="${d.cover}" alt="${d.title}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 400%22%3E%3Crect fill=%22%23222%22 width=%22300%22 height=%22400%22/%3E%3C/svg%3E'">
+              <div class="ep-badge">${d.episodes}集</div>
+              <div class="overlay"></div>
+            </div>
+            <div class="card-info">
+              <div class="card-title">${d.title}</div>
+              <div class="card-meta"><span>${d.views}</span><span style="color:var(--primary)">▶播放</span></div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }, 300);
+  });
+}
+
+// ============================================================
+// Toast
+// ============================================================
+function showToast(msg) {
+  const old = document.querySelector('.toast');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+
+// ============================================================
+// Back button
+// ============================================================
+window.onpopstate = () => {
+  if (document.getElementById('detailModal').classList.contains('show')) {
+    closeDetail();
+  }
+  if (document.getElementById('playerModal').classList.contains('show')) {
+    closePlayer();
+  }
+};
+
+// ============================================================
+// Start
+// ============================================================
+init();
+</script>
+</body>
+</html>
