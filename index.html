@@ -288,13 +288,13 @@ const DEMO_DATA = {
 };
 
 // Demo episodes for each drama
-function getDemoEpisodes(dramaId, total) {
+function getDemoEpisodes(dramaId, total, lockedNum) {
   const eps = [];
   for (let i = 1; i <= Math.min(total, 20); i++) {
     eps.push({
       num: i,
       title: `第${i}集`,
-      locked: i > drama.locked,
+      locked: i > (lockedNum || 1),
       // Use a public domain video for demo
       url: 'https://www.w3schools.com/html/mov_bbb.mp4'
     });
@@ -464,7 +464,7 @@ async function loadEpisodes(drama) {
     } catch(e) {}
   }
   // Demo episodes
-  return getDemoEpisodes(drama.id, drama.episodes);
+  return getDemoEpisodes(drama.id, drama.episodes, drama.locked);
 }
 
 function renderEpisodes(eps) {
