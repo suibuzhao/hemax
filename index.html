@@ -13,6 +13,12 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* PC 端适配 */
+@media (min-width: 768px) {
+  body{max-width:480px;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.5);min-height:100vh}
+  .header{max-width:480px;left:50%;transform:translateX(-50%);width:100%}
+}
 body.no-scroll{overflow:hidden}
 
 /* ========== Header ========== */
